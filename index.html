@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+<title>경유 주유 기록</title>
+<meta name="theme-color" content="#0f6b4f">
+<style>
+  :root { --bg:#f3f5f4; --card:#fff; --fg:#18211f; --muted:#5d6b67; --line:#d9e0dd; --accent:#0f6b4f; --chip:#e3eeea; --err:#b3261e; --amber:#b86e00; }
+  * { box-sizing: border-box }
+  [hidden] { display:none !important }
+  .stack { display:grid; gap:10px }
+  body { margin:0; background:var(--bg); color:var(--fg); font-family:"Malgun Gothic","Apple SD Gothic Neo",system-ui,sans-serif; font-size:16px; line-height:1.5 }
+  .wrap { max-width:520px; margin:0 auto; padding:18px 16px 40px; display:grid; gap:14px }
+  h1 { font-size:1.3rem; margin:0 }
+  h1 small { font-size:.7rem; color:var(--accent); border:1.5px solid var(--accent); border-radius:4px; padding:0 5px; margin-left:6px; vertical-align:3px; letter-spacing:.08em }
+  .tabs { display:grid; grid-template-columns:1fr 1fr; background:var(--chip); border-radius:10px; padding:4px; gap:4px }
+  .tabs button { border:0; background:transparent; color:var(--muted); font:inherit; font-weight:bold; padding:10px; border-radius:7px; cursor:pointer }
+  .tabs button.on { background:var(--card); color:var(--fg); box-shadow:0 1px 2px rgba(0,0,0,.08) }
+  .card { background:var(--card); border:1px solid var(--line); border-radius:12px; padding:16px; display:grid; gap:13px }
+  label { display:grid; gap:4px; font-size:.86rem; font-weight:bold; color:var(--muted) }
+  .req { color:var(--err) }
+  input, select { font:inherit; font-size:1rem; color:var(--fg); background:var(--bg); border:1.5px solid var(--line); border-radius:8px; padding:11px 12px; width:100%; min-width:0 }
+  input:focus, select:focus { outline:2px solid var(--accent); outline-offset:1px }
+  .big { font-size:1.7rem; font-weight:bold; padding:9px 12px; letter-spacing:.04em }
+  .unit { position:relative } .unit input { padding-right:40px }
+  .unit span { position:absolute; right:12px; top:50%; transform:translateY(-50%); color:var(--muted); font-weight:bold }
+  .row { display:grid; grid-template-columns:1fr 1fr; gap:12px }
+  .car { border:1.5px solid var(--accent); background:#eef6f2; border-radius:9px; padding:10px 12px; display:grid; gap:2px }
+  .car b { font-size:1.15rem } .car span { font-size:.85rem; color:var(--muted) }
+  .car.none { border-color:var(--line); background:var(--bg) } .car.none b { font-size:.95rem; color:var(--muted); font-weight:normal }
+  .tank-note { border-left:4px solid var(--amber); background:#fff6e8; padding:8px 12px; border-radius:6px; font-size:.88rem; color:#6b4300 }
+  button.save { font:inherit; font-weight:bold; font-size:1.1rem; border:0; border-radius:10px; padding:15px; background:var(--accent); color:#fff; cursor:pointer }
+  button.save.tank { background:var(--amber) }
+  button.save:disabled { opacity:.5 }
+  .msg { min-height:1.4em; font-size:.95rem } .ok { color:var(--accent); font-weight:bold } .bad { color:var(--err) }
+  h2 { font-size:.95rem; margin:0 }
+  table { width:100%; border-collapse:collapse; font-size:.9rem }
+  th, td { padding:7px 6px; border-bottom:1px solid var(--line); text-align:left }
+  th { color:var(--muted); font-weight:normal; font-size:.78rem }
+  td.n, th.n { text-align:right; font-variant-numeric:tabular-nums }
+  .note { font-size:.8rem; color:var(--muted); margin:0 }
+  .locked .tabs, .locked #f, .locked #recentBox { display:none !important }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>경유 주유 기록 <small>DIESEL</small></h1>
+
+  <form class="card" id="pinBox" hidden novalidate>
+    <label>회사 PIN
+      <input id="pin" class="big" type="password" inputmode="numeric" maxlength="8" autocomplete="off" placeholder="••••">
+    </label>
+    <button class="save" type="submit">확인</button>
+    <div class="msg bad" id="pinMsg" role="status"></div>
+    <p class="note">처음 한 번만 입력하면 이 휴대폰에 기억됩니다.</p>
+  </form>
+
+  <div class="tabs">
+    <button id="tFuel" class="on" type="button">차량 주유</button>
+    <button id="tTank" type="button">탱크 입고</button>
+  </div>
+
+  <form class="card" id="f" novalidate>
+    <div id="carBox" class="stack">
+      <label>차량번호 뒤 4자리 <span class="req">*</span>
+        <input id="last4" class="big" inputmode="numeric" maxlength="4" placeholder="예: 7429" autocomplete="off">
+      </label>
+      <div class="car none" id="carCard"><b>4자리를 넣으면 차량이 표시됩니다</b></div>
+      <label>또는 목록에서 고르기
+        <select id="plateSel"><option value="">차량 목록 불러오는 중…</option></select>
+      </label>
+    </div>
+    <div class="tank-note" id="tankNote" hidden>탱크로리로 회사 탱크에 경유를 채웠을 때 입력합니다. 시트의 <b>경유충전량</b>으로 들어가 탱크 잔량에 더해집니다.</div>
+
+    <label><span id="amtLabel">주유량</span> <span class="req">*</span>
+      <div class="unit"><input id="liters" class="big" type="number" inputmode="decimal" step="0.01" min="0" placeholder="0"><span>L</span></div>
+    </label>
+    <div class="row">
+      <label>날짜 <input id="date" type="date"></label>
+      <label>메모 (선택) <input id="memo" placeholder="예: 외부 주유"></label>
+    </div>
+    <button class="save" id="save" type="submit">저장</button>
+    <div class="msg" id="msg" role="status"></div>
+    <p class="note">마지막으로 넣은 차량은 이 휴대폰에 기억돼서, 다음엔 주유량만 넣으면 됩니다.</p>
+  </form>
+
+  <div class="card" id="recentBox" hidden>
+    <h2 id="recentTitle">이 차량 최근 기록</h2>
+    <table>
+      <thead><tr><th>날짜</th><th class="n">주유량</th><th>메모</th></tr></thead>
+      <tbody id="recent"></tbody>
+    </table>
+  </div>
+</div>
+
+<script>
+  const $ = id => document.getElementById(id);
+  const mem = { get(k){ try { return localStorage.getItem(k) || '' } catch(e) { return '' } },
+                set(k,v){ try { localStorage.setItem(k, v) } catch(e) {} } };
+  const today = () => { const d = new Date(); d.setMinutes(d.getMinutes() - d.getTimezoneOffset()); return d.toISOString().slice(0,10) };
+  let cars = [], current = null, mode = 'fuel';
+
+  $('date').value = today();
+
+  // 모드 전환
+  function setMode(m) {
+    mode = m;
+    $('tFuel').classList.toggle('on', m === 'fuel'); $('tTank').classList.toggle('on', m === 'tank');
+    $('carBox').hidden = m === 'tank'; $('tankNote').hidden = m !== 'tank';
+    $('amtLabel').textContent = m === 'tank' ? '입고량' : '주유량';
+    $('save').classList.toggle('tank', m === 'tank');
+    $('save').textContent = m === 'tank' ? '탱크 입고 저장' : '저장';
+    $('recentBox').hidden = m === 'tank' || !current;
+    $('msg').textContent = '';
+  }
+  $('tFuel').onclick = () => setMode('fuel');
+  $('tTank').onclick = () => setMode('tank');
+
+  // 차량 선택
+  function pick(car) {
+    current = car || null;
+    const card = $('carCard');
+    if (!car) { card.className = 'car none'; card.innerHTML = '<b></b>'; card.firstChild.textContent = '4자리를 넣으면 차량이 표시됩니다'; $('recentBox').hidden = true; return }
+    card.className = 'car'; card.innerHTML = '<b></b><span></span>';
+    card.children[0].textContent = car.plate;
+    card.children[1].textContent = [car.model, car.driver, car.company + ' ' + car.dept, car.kind === '개인' ? '개인차량' : ''].filter(Boolean).join(' · ');
+    $('plateSel').value = car.plate;
+    if ($('last4').value !== car.plate.slice(-4)) $('last4').value = car.plate.slice(-4);
+    loadRecent(car.plate);
+  }
+
+  $('last4').addEventListener('input', () => {
+    const v = $('last4').value.replace(/\D/g, '').slice(0, 4); $('last4').value = v;
+    if (v.length < 4) { if (current && current.plate.slice(-4) !== v) pick(null); return }
+    const hit = cars.filter(c => c.plate.slice(-4) === v);
+    if (hit.length === 1) pick(hit[0]);
+    else {
+      pick(null);
+      $('carCard').firstChild.textContent = hit.length ? '같은 4자리 차량이 여러 대입니다. 아래 목록에서 골라 주세요.' : '등록되지 않은 번호입니다. 다시 확인하거나 목록에서 골라 주세요.';
+    }
+  });
+  $('plateSel').onchange = () => pick(cars.find(c => c.plate === $('plateSel').value));
+
+  // 데이터는 구글 시트(Apps Script)에 저장됨. 구글 로그인 쿠키를 보내지 않아서 계정 상태와 상관없이 열림
+  const API = 'https://script.google.com/macros/s/AKfycbwSmMlWCC4rc_VZNed83Ouei5AVYk99wvIJAqFgOEG45hRZh0td0DEhJKbNjTnnX_DFAg/exec';
+  let PIN = mem.get('fuel.pin');
+  const apiGet = q => fetch(API + '?' + new URLSearchParams(Object.assign({ pin: PIN }, q)), { credentials: 'omit' }).then(r => r.json());
+  const apiPost = d => fetch(API, { method: 'POST', credentials: 'omit', headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+    body: JSON.stringify(Object.assign({ pin: PIN }, d)) }).then(r => r.json());
+
+  function needPin(text) {
+    mem.set('fuel.pin', ''); document.body.classList.add('locked');
+    $('pinBox').hidden = false; $('pinMsg').textContent = text || ''; $('pin').value = ''; $('pin').focus();
+  }
+  $('pinBox').addEventListener('submit', e => {
+    e.preventDefault(); PIN = $('pin').value.trim();
+    if (!PIN) { $('pinMsg').textContent = 'PIN을 입력해 주세요.'; return }
+    $('pinMsg').textContent = '확인 중…'; loadCars();
+  });
+
+  function loadCars() { apiGet({ api: 'vehicles' }).then(list => {
+    if (!Array.isArray(list)) { needPin(PIN ? 'PIN이 맞지 않습니다. 다시 입력해 주세요.' : ''); return }
+    mem.set('fuel.pin', PIN); document.body.classList.remove('locked'); $('pinBox').hidden = true;
+    cars = list || [];
+    const sel = $('plateSel'); sel.innerHTML = '';
+    sel.add(new Option('차량을 고르세요', ''));
+    const groups = {};
+    cars.forEach(c => { const g = c.company + (c.kind === '개인' ? ' · 개인차량' : ' · ' + c.dept); (groups[g] = groups[g] || []).push(c) });
+    Object.keys(groups).forEach(g => {
+      const og = document.createElement('optgroup'); og.label = g;
+      groups[g].forEach(c => og.appendChild(new Option(c.plate + '  ' + [c.model, c.driver].filter(Boolean).join(' · '), c.plate)));
+      sel.appendChild(og);
+    });
+    const saved = cars.find(c => c.plate === mem.get('fuel.plate'));
+    if (saved) pick(saved);
+  }).catch(() => { $('plateSel').innerHTML = '<option value="">목록을 못 불러왔습니다. 새로고침해 주세요.</option>'; $('pinMsg').textContent = '연결하지 못했습니다. 인터넷을 확인해 주세요.' }); }
+  if (PIN) loadCars(); else needPin('');
+
+  function loadRecent(plate) {
+    apiGet({ api: 'recent', plate }).then(rows => showRecent(plate, rows)).catch(() => {});
+  }
+  function showRecent(plate, rows) {
+    const tb = $('recent'); tb.innerHTML = '';
+    $('recentTitle').textContent = plate + ' 최근 기록';
+    if (!rows || !rows.length || mode === 'tank') { $('recentBox').hidden = true; return }
+    rows.forEach(r => {
+      const tr = document.createElement('tr');
+      [r.date, r.liters + ' L', r.memo || ''].forEach((v, i) => {
+        const td = document.createElement('td'); td.textContent = v; if (i === 1) td.className = 'n'; tr.appendChild(td);
+      });
+      tb.appendChild(tr);
+    });
+    $('recentBox').hidden = false;
+  }
+
+  $('f').addEventListener('submit', e => {
+    e.preventDefault();
+    const msg = $('msg'), amt = Number($('liters').value);
+    if (mode === 'fuel' && !current) { msg.className = 'msg bad'; msg.textContent = '차량을 먼저 골라 주세요.'; return }
+    if (!(amt > 0)) { msg.className = 'msg bad'; msg.textContent = (mode === 'tank' ? '입고량' : '주유량') + '을 넣어 주세요.'; return }
+    if (mode === 'fuel' && amt > 500) { msg.className = 'msg bad'; msg.textContent = '주유량이 500L를 넘습니다. 숫자를 다시 확인해 주세요.'; return }
+    const d = { mode, plate: current ? current.plate : '', liters: amt, date: $('date').value, memo: $('memo').value };
+    $('save').disabled = true; msg.className = 'msg'; msg.textContent = '저장 중…';
+    apiPost(d)
+      .then(res => {
+        if (res && res.error === 'pin') { needPin('PIN이 바뀌었습니다. 새 PIN을 입력해 주세요.'); $('save').disabled = false; return }
+        if (!res || !res.ok) throw new Error(res && res.error);
+        const rows = res.rows;
+        msg.className = 'msg ok';
+        if (mode === 'tank') msg.textContent = '탱크 입고 저장: ' + amt.toLocaleString('ko-KR') + 'L';
+        else { mem.set('fuel.plate', d.plate); msg.textContent = '저장했습니다: ' + d.plate + ' · ' + amt + 'L'; showRecent(d.plate, rows) }
+        $('liters').value = ''; $('memo').value = '';
+        $('save').disabled = false;
+      })
+      .catch(err => {
+        msg.className = 'msg bad'; msg.textContent = (err && err.message) || '저장하지 못했습니다. 인터넷 연결을 확인하고 다시 눌러 주세요.';
+        $('save').disabled = false;
+      });
+  });
+</script>
+</body>
+</html>
