@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
-<title>차량 주유 기록</title>
+<title>차량 주유·요소수 기록</title>
 <meta name="theme-color" content="#0f6b4f">
 <style>
   :root { --bg:#f3f5f4; --card:#fff; --fg:#18211f; --muted:#5d6b67; --line:#d9e0dd; --accent:#0f6b4f; --chip:#e3eeea; --err:#b3261e; --amber:#b86e00; --blue:#245b92; }
@@ -11,7 +11,7 @@
   body { margin:0; background:var(--bg); color:var(--fg); font-family:"Malgun Gothic","Apple SD Gothic Neo",system-ui,sans-serif; font-size:16px; line-height:1.5 }
   .wrap { max-width:540px; margin:0 auto; padding:18px 16px 40px; display:grid; gap:14px }
   h1 { font-size:1.3rem; margin:0 } h1 small { font-size:.7rem; color:var(--accent); border:1.5px solid var(--accent); border-radius:4px; padding:0 5px; margin-left:6px; vertical-align:3px; letter-spacing:.08em }
-  .tabs { display:grid; grid-template-columns:repeat(3,1fr); background:var(--chip); border-radius:10px; padding:4px; gap:4px }
+  .tabs { display:grid; grid-template-columns:repeat(4,1fr); background:var(--chip); border-radius:10px; padding:4px; gap:4px }
   .tabs button { border:0; background:transparent; color:var(--muted); font:inherit; font-size:.9rem; font-weight:bold; padding:10px 4px; border-radius:7px; cursor:pointer }
   .tabs button.on { background:var(--card); color:var(--fg); box-shadow:0 1px 2px rgba(0,0,0,.08) }
   .card { background:var(--card); border:1px solid var(--line); border-radius:12px; padding:16px; display:grid; gap:13px }
@@ -23,19 +23,20 @@
   .car { border:1.5px solid var(--accent); background:#eef6f2; border-radius:9px; padding:10px 12px; display:grid; gap:2px }
   .car b { font-size:1.15rem } .car span { font-size:.85rem; color:var(--muted) } .car.none { border-color:var(--line); background:var(--bg) } .car.none b { font-size:.95rem; color:var(--muted); font-weight:normal }
   .mode-note { border-left:4px solid var(--blue); background:#edf5fd; padding:9px 12px; border-radius:6px; font-size:.88rem; color:#173f68 }
+  .mode-note.urea { border-left-color:#48768c; background:#edf6f8; color:#214653 }
   .mode-note.tank { border-left-color:var(--amber); background:#fff6e8; color:#6b4300 }
   .calc { background:#f7f8f7; border:1px solid var(--line); border-radius:8px; padding:9px 12px; font-size:.9rem; color:var(--muted) }
   button.save { font:inherit; font-weight:bold; font-size:1.1rem; border:0; border-radius:10px; padding:15px; background:var(--accent); color:#fff; cursor:pointer }
-  button.save.external { background:var(--blue) } button.save.tank { background:var(--amber) } button.save:disabled { opacity:.5 }
+  button.save.external { background:var(--blue) } button.save.urea { background:#48768c } button.save.tank { background:var(--amber) } button.save:disabled { opacity:.5 }
   .msg { min-height:1.4em; font-size:.95rem } .ok { color:var(--accent); font-weight:bold } .bad { color:var(--err) }
   h2 { font-size:.95rem; margin:0 } table { width:100%; border-collapse:collapse; font-size:.88rem } th,td { padding:7px 5px; border-bottom:1px solid var(--line); text-align:left } th { color:var(--muted); font-weight:normal; font-size:.76rem } td.n,th.n { text-align:right; font-variant-numeric:tabular-nums }
   .note { font-size:.8rem; color:var(--muted); margin:0 } .locked .tabs,.locked #f,.locked #recentBox { display:none!important }
-  @media (max-width:380px) { .row { grid-template-columns:1fr } .tabs button { font-size:.82rem } }
+  @media (max-width:380px) { .row { grid-template-columns:1fr } .tabs button { font-size:.76rem; padding-left:2px; padding-right:2px } }
 </style>
 </head>
 <body>
 <div class="wrap">
-  <h1>차량 주유 기록 <small>FUEL</small></h1>
+  <h1>차량 주유·요소수 기록 <small>FUEL</small></h1>
 
   <form class="card" id="pinBox" hidden novalidate>
     <label>회사 PIN<input id="pin" class="big" type="password" inputmode="numeric" maxlength="8" autocomplete="off" placeholder="••••"></label>
@@ -46,11 +47,13 @@
   <div class="tabs">
     <button id="tFuel" class="on" type="button">사내 경유</button>
     <button id="tExternal" type="button">외부주유</button>
+    <button id="tUrea" type="button">요소수</button>
     <button id="tTank" type="button">탱크 입고</button>
   </div>
 
   <form class="card" id="f" novalidate>
     <div class="mode-note" id="externalNote" hidden>외부 주유소에서 넣은 <b>휘발유·LPG</b> 내역을 입력합니다. 영수증의 주유량과 결제금액을 적어 주세요.</div>
+    <div class="mode-note urea" id="ureaNote" hidden>차량에 보충한 <b>요소수 사용량</b>을 입력합니다. 현재 단가로 금액이 자동 계산됩니다.</div>
     <div class="mode-note tank" id="tankNote" hidden>탱크로리로 회사 탱크에 경유를 채웠을 때 입력합니다.</div>
 
     <div id="carBox" class="stack">
@@ -92,22 +95,23 @@
 
   function isExternalCar(c){ return /LPG|가솔린/i.test(c.model||'') }
   function guessedFuel(c){ return /LPG/i.test((c&&c.model)||'')?'LPG':'휘발유' }
-  function visibleCars(){ return mode==='external'?cars.filter(isExternalCar):cars }
+  function visibleCars(){ return mode==='external'?cars.filter(isExternalCar):mode==='urea'?cars.filter(c=>!isExternalCar(c)):cars }
   function setMode(m){
     mode=m; current=null; $('last4').value='';
-    ['Fuel','External','Tank'].forEach(x=>$('t'+x).classList.toggle('on',m===x.toLowerCase()));
-    $('carBox').hidden=m==='tank'; $('externalNote').hidden=m!=='external'; $('tankNote').hidden=m!=='tank';
+    ['Fuel','External','Urea','Tank'].forEach(x=>$('t'+x).classList.toggle('on',m===x.toLowerCase()));
+    $('carBox').hidden=m==='tank'; $('externalNote').hidden=m!=='external'; $('ureaNote').hidden=m!=='urea'; $('tankNote').hidden=m!=='tank';
     $('externalFields').hidden=m!=='external'; $('dieselAmount').hidden=m==='external';
-    $('save').className='save'+(m==='external'?' external':m==='tank'?' tank':'');
-    $('save').textContent=m==='external'?'외부주유 저장':m==='tank'?'탱크 입고 저장':'저장';
-    $('amtLabel').textContent=m==='tank'?'입고량':'주유량'; $('memoryNote').hidden=m==='tank'; $('msg').textContent=''; $('recentBox').hidden=true;
+    $('save').className='save'+(m==='external'?' external':m==='urea'?' urea':m==='tank'?' tank':'');
+    $('save').textContent=m==='external'?'외부주유 저장':m==='urea'?'요소수 저장':m==='tank'?'탱크 입고 저장':'저장';
+    $('amtLabel').textContent=m==='tank'?'입고량':m==='urea'?'요소수 사용량':'주유량'; $('memoryNote').hidden=m==='tank'; $('msg').textContent=''; $('recentBox').hidden=true;
     renderCarOptions(); pick(null);
-    const saved=visibleCars().find(c=>c.plate===mem.get(m==='external'?'fuel.externalPlate':'fuel.plate')); if(saved) pick(saved);
+    const memoryKey=m==='external'?'fuel.externalPlate':m==='urea'?'fuel.ureaPlate':'fuel.plate';
+    const saved=visibleCars().find(c=>c.plate===mem.get(memoryKey)); if(saved) pick(saved);
   }
-  $('tFuel').onclick=()=>setMode('fuel'); $('tExternal').onclick=()=>setMode('external'); $('tTank').onclick=()=>setMode('tank');
+  $('tFuel').onclick=()=>setMode('fuel'); $('tExternal').onclick=()=>setMode('external'); $('tUrea').onclick=()=>setMode('urea'); $('tTank').onclick=()=>setMode('tank');
 
   function renderCarOptions(){
-    const sel=$('plateSel'); sel.innerHTML=''; sel.add(new Option(mode==='external'?'휘발유·LPG 차량을 고르세요':'차량을 고르세요',''));
+    const sel=$('plateSel'); sel.innerHTML=''; sel.add(new Option(mode==='external'?'휘발유·LPG 차량을 고르세요':mode==='urea'?'요소수 사용 차량을 고르세요':'차량을 고르세요',''));
     const groups={}; visibleCars().forEach(c=>{const g=c.company+(c.kind==='개인'?' · 개인차량':' · '+c.dept);(groups[g]=groups[g]||[]).push(c)});
     Object.keys(groups).forEach(g=>{const og=document.createElement('optgroup');og.label=g;groups[g].forEach(c=>og.appendChild(new Option(c.plate+'  '+[c.model,c.driver].filter(Boolean).join(' · '),c.plate)));sel.appendChild(og)});
   }
@@ -127,7 +131,7 @@
   function loadCars(){apiGet({api:'vehicles'}).then(list=>{if(!Array.isArray(list)){needPin(PIN?'PIN이 맞지 않습니다. 다시 입력해 주세요.':'');return}mem.set('fuel.pin',PIN);document.body.classList.remove('locked');$('pinBox').hidden=true;cars=list||[];setMode(mode)}).catch(()=>{$('pinMsg').textContent='연결하지 못했습니다. 인터넷을 확인해 주세요.'})}
   if(PIN) loadCars(); else needPin('');
 
-  function loadRecent(plate){apiGet({api:'recent',plate,mode:mode==='external'?'external':'fuel'}).then(rows=>showRecent(plate,rows)).catch(()=>{})}
+  function loadRecent(plate){apiGet({api:'recent',plate,mode:mode==='external'?'external':mode==='urea'?'urea':'fuel'}).then(rows=>showRecent(plate,rows)).catch(()=>{})}
   function showRecent(plate,rows){
     const tb=$('recent');tb.innerHTML='';$('recentTitle').textContent=plate+' 최근 기록';
     if(!rows||!rows.length||mode==='tank'){$('recentBox').hidden=true;return}
@@ -138,10 +142,10 @@
     e.preventDefault();const msg=$('msg');if(mode!=='tank'&&!current){msg.className='msg bad';msg.textContent='차량을 먼저 골라 주세요.';return}
     let d={mode,plate:current?current.plate:'',date:$('date').value,memo:$('memo').value.trim()};
     if(mode==='external'){d.fuelType=$('fuelType').value;d.liters=Number($('externalLiters').value);d.amount=Math.round(Number($('amount').value));d.station=$('station').value.trim();if(!(d.liters>0)){msg.className='msg bad';msg.textContent='주유량을 넣어 주세요.';return}if(!(d.amount>0)){msg.className='msg bad';msg.textContent='결제금액을 넣어 주세요.';return}if(d.liters>500){msg.className='msg bad';msg.textContent='주유량이 500L를 넘습니다. 숫자를 확인해 주세요.';return}}
-    else{d.liters=Number($('liters').value);if(!(d.liters>0)){msg.className='msg bad';msg.textContent=(mode==='tank'?'입고량':'주유량')+'을 넣어 주세요.';return}if(mode==='fuel'&&d.liters>500){msg.className='msg bad';msg.textContent='주유량이 500L를 넘습니다. 숫자를 확인해 주세요.';return}}
+    else{d.liters=Number($('liters').value);if(!(d.liters>0)){msg.className='msg bad';msg.textContent=(mode==='tank'?'입고량':mode==='urea'?'요소수 사용량':'주유량')+'을 넣어 주세요.';return}if((mode==='fuel'||mode==='urea')&&d.liters>500){msg.className='msg bad';msg.textContent=(mode==='urea'?'요소수 사용량':'주유량')+'이 500L를 넘습니다. 숫자를 확인해 주세요.';return}}
     $('save').disabled=true;msg.className='msg';msg.textContent='저장 중…';
     apiPost(d).then(res=>{if(res&&res.error==='pin'){needPin('PIN이 바뀌었습니다. 새 PIN을 입력해 주세요.');return}if(!res||!res.ok)throw new Error(res&&res.error);
-      msg.className='msg ok';if(mode==='tank')msg.textContent='탱크 입고 저장: '+d.liters.toLocaleString('ko-KR')+'L';else if(mode==='external'){mem.set('fuel.externalPlate',d.plate);msg.textContent='외부주유 저장: '+d.plate+' · '+d.liters+'L · '+d.amount.toLocaleString('ko-KR')+'원';showRecent(d.plate,res.rows)}else{mem.set('fuel.plate',d.plate);msg.textContent='저장했습니다: '+d.plate+' · '+d.liters+'L';showRecent(d.plate,res.rows)}
+      msg.className='msg ok';if(mode==='tank')msg.textContent='탱크 입고 저장: '+d.liters.toLocaleString('ko-KR')+'L';else if(mode==='external'){mem.set('fuel.externalPlate',d.plate);msg.textContent='외부주유 저장: '+d.plate+' · '+d.liters+'L · '+d.amount.toLocaleString('ko-KR')+'원';showRecent(d.plate,res.rows)}else if(mode==='urea'){mem.set('fuel.ureaPlate',d.plate);msg.textContent='요소수 저장: '+d.plate+' · '+d.liters+'L';showRecent(d.plate,res.rows)}else{mem.set('fuel.plate',d.plate);msg.textContent='저장했습니다: '+d.plate+' · '+d.liters+'L';showRecent(d.plate,res.rows)}
       $('liters').value='';$('externalLiters').value='';$('amount').value='';$('station').value='';$('memo').value='';updateUnit();
     }).catch(err=>{msg.className='msg bad';msg.textContent=(err&&err.message)||'저장하지 못했습니다. 인터넷 연결을 확인해 주세요.'}).finally(()=>{$('save').disabled=false});
   });
