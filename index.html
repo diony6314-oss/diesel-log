@@ -111,8 +111,9 @@
   function isExternalCar(c){ return /LPG|가솔린/i.test(c.model||'') }
   function guessedFuel(c){ return /LPG/i.test((c&&c.model)||'')?'LPG':'휘발유' }
   function visibleCars(){ return mode==='external'?cars.filter(isExternalCar):mode==='urea'?cars.filter(c=>!isExternalCar(c)):cars }
+  function clearSharedAmounts(){$('liters').value='';$('meterTotal').value='';$('tankUnitPrice').value='';$('tankAmount').value='';updateTankAmount()}
   function setMode(m){
-    mode=m; current=null; $('last4').value='';
+    const changed=mode!==m; mode=m; current=null; $('last4').value='';if(changed)clearSharedAmounts();
     ['Fuel','External','Urea','Tank'].forEach(x=>$('t'+x).classList.toggle('on',m===x.toLowerCase()));
     $('carBox').hidden=m==='tank'; $('externalNote').hidden=m!=='external'; $('ureaNote').hidden=m!=='urea'; $('tankNote').hidden=m!=='tank'; $('tankFields').hidden=m!=='tank';
     $('externalFields').hidden=m!=='external'; $('dieselAmount').hidden=m==='external'; $('meterField').hidden=!(m==='fuel'||m==='urea');
@@ -126,7 +127,7 @@
     const saved=visibleCars().find(c=>c.plate===mem.get(memoryKey)); if(saved) pick(saved);
   }
   $('tFuel').onclick=()=>setMode('fuel'); $('tExternal').onclick=()=>setMode('external'); $('tUrea').onclick=()=>setMode('urea'); $('tTank').onclick=()=>setMode('tank');
-  $('tankProduct').onchange=()=>{if(mode==='tank'){setMode('tank');updateTankAmount()}};
+  $('tankProduct').onchange=()=>{if(mode==='tank'){clearSharedAmounts();setMode('tank')}};
 
   function renderCarOptions(){
     const sel=$('plateSel'); sel.innerHTML=''; sel.add(new Option(mode==='external'?'휘발유·LPG 차량을 고르세요':mode==='urea'?'요소수 사용 차량을 고르세요':'차량을 고르세요',''));
