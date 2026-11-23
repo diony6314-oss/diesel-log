@@ -20,6 +20,8 @@
   input:focus, select:focus { outline:2px solid var(--accent); outline-offset:1px } .big { font-size:1.55rem; font-weight:bold; padding:9px 12px; letter-spacing:.03em }
   .unit { position:relative } .unit input { padding-right:52px } .unit span { position:absolute; right:12px; top:50%; transform:translateY(-50%); color:var(--muted); font-weight:bold }
   .row { display:grid; grid-template-columns:1fr 1fr; gap:12px }
+  .tank-price-row { grid-template-columns:minmax(0,1fr) minmax(0,1fr); gap:10px }
+  .tank-price-row label { min-width:0 } .tank-price-row .big { font-size:1.3rem } .tank-price-row .unit input { padding-left:10px; padding-right:46px }
   .car { border:1.5px solid var(--accent); background:#eef6f2; border-radius:9px; padding:10px 12px; display:grid; gap:2px }
   .car b { font-size:1.15rem } .car span { font-size:.85rem; color:var(--muted) } .car.none { border-color:var(--line); background:var(--bg) } .car.none b { font-size:.95rem; color:var(--muted); font-weight:normal }
   .mode-note { border-left:4px solid var(--blue); background:#edf5fd; padding:9px 12px; border-radius:6px; font-size:.88rem; color:#173f68 }
@@ -32,7 +34,7 @@
   .msg { min-height:1.4em; font-size:.95rem } .ok { color:var(--accent); font-weight:bold } .bad { color:var(--err) }
   h2 { font-size:.95rem; margin:0 } table { width:100%; border-collapse:collapse; font-size:.82rem } th,td { padding:7px 4px; border-bottom:1px solid var(--line); text-align:left } th { color:var(--muted); font-weight:normal; font-size:.72rem } td.n,th.n { text-align:right; font-variant-numeric:tabular-nums } tr.warn td { background:#fff0ed; color:var(--err); font-weight:bold }
   .note { font-size:.8rem; color:var(--muted); margin:0 } .locked .tabs,.locked #f,.locked #recentBox { display:none!important }
-  @media (max-width:380px) { .row { grid-template-columns:1fr } .tabs button { font-size:.76rem; padding-left:2px; padding-right:2px } }
+  @media (max-width:380px) { .row:not(.tank-price-row) { grid-template-columns:1fr } .tank-price-row { gap:8px } .tank-price-row .big { font-size:1.15rem } .tabs button { font-size:.76rem; padding-left:2px; padding-right:2px } }
 </style>
 </head>
 <body>
@@ -59,7 +61,7 @@
 
     <div id="tankFields" class="stack" hidden>
       <label>입고 품목 <span class="req">*</span><select id="tankProduct"><option value="diesel">경유</option><option value="urea">요소수</option></select></label>
-      <div class="row">
+      <div class="row tank-price-row">
         <label>단가 <span class="req">*</span><div class="unit"><input id="tankUnitPrice" class="big" type="number" inputmode="numeric" step="1" min="0" placeholder="0"><span>원/L</span></div></label>
         <label>입고금액<div class="unit"><input id="tankAmount" class="big" type="text" value="" placeholder="자동 계산" readonly><span>원</span></div></label>
       </div>
