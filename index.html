@@ -20,6 +20,7 @@
   input:focus, select:focus { outline:2px solid var(--accent); outline-offset:1px } .big { font-size:1.55rem; font-weight:bold; padding:9px 12px; letter-spacing:.03em }
   .unit { position:relative } .unit input { padding-right:52px } .unit span { position:absolute; right:12px; top:50%; transform:translateY(-50%); color:var(--muted); font-weight:bold }
   .row { display:grid; grid-template-columns:1fr 1fr; gap:12px }
+  .external-meta-row select, .external-meta-row input { height:48px }
   .tank-price-row { grid-template-columns:minmax(0,1fr) minmax(0,1fr); gap:10px }
   .tank-price-row label { min-width:0 } .tank-price-row .big { font-size:1.3rem } .tank-price-row .unit input { padding-left:10px; padding-right:46px }
   .car { border:1.5px solid var(--accent); background:#eef6f2; border-radius:9px; padding:10px 12px; display:grid; gap:2px }
@@ -75,7 +76,7 @@
     </div>
 
     <div id="externalFields" class="stack" hidden>
-      <div class="row">
+      <div class="row external-meta-row">
         <label><span>유종 <span class="req">*</span></span><select id="fuelType"><option value="휘발유">휘발유</option><option value="LPG">LPG</option></select></label>
         <label><span>주유소 (선택)</span><input id="station" placeholder="예: OO주유소"></label>
       </div>
