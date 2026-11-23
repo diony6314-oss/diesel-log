@@ -61,7 +61,7 @@
     <div class="mode-note tank" id="tankNote" hidden>회사 탱크에 <b>경유 또는 요소수</b>가 입고됐을 때 입력합니다.</div>
 
     <div id="tankFields" class="stack" hidden>
-      <label>입고 품목 <span class="req">*</span><select id="tankProduct"><option value="diesel">경유</option><option value="urea">요소수</option></select></label>
+      <label><span>입고 품목 <span class="req">*</span></span><select id="tankProduct"><option value="diesel">경유</option><option value="urea">요소수</option></select></label>
       <div class="row tank-price-row">
         <label><span>단가 <span class="req">*</span></span><div class="unit"><input id="tankUnitPrice" class="big" type="number" inputmode="numeric" step="1" min="0" placeholder="0"><span>원/L</span></div></label>
         <label><span>입고금액</span><div class="unit"><input id="tankAmount" class="big" type="text" value="" placeholder="자동 계산" readonly><span>원</span></div></label>
@@ -70,7 +70,7 @@
     </div>
 
     <div id="carBox" class="stack">
-      <label>차량번호 뒤 4자리 <span class="req">*</span><input id="last4" class="big" inputmode="numeric" maxlength="4" placeholder="예: 1623" autocomplete="off"></label>
+      <label><span>차량번호 뒤 4자리 <span class="req">*</span></span><input id="last4" class="big" inputmode="numeric" maxlength="4" placeholder="예: 1623" autocomplete="off"></label>
       <div class="car none" id="carCard"><b>4자리를 넣으면 차량이 표시됩니다</b></div>
       <label>또는 목록에서 고르기<select id="plateSel"><option value="">차량 목록 불러오는 중…</option></select></label>
     </div>
@@ -81,17 +81,17 @@
         <label><span>주유소 (선택)</span><input id="station" placeholder="예: OO주유소"></label>
       </div>
       <div class="row">
-        <label>주유량 <span class="req">*</span><div class="unit"><input id="externalLiters" class="big" type="number" inputmode="decimal" step="0.001" min="0" placeholder="0"><span>L</span></div></label>
-        <label>결제금액 <span class="req">*</span><div class="unit"><input id="amount" class="big" type="number" inputmode="numeric" step="1" min="0" placeholder="0"><span>원</span></div></label>
+        <label><span>주유량 <span class="req">*</span></span><div class="unit"><input id="externalLiters" class="big" type="number" inputmode="decimal" step="0.001" min="0" placeholder="0"><span>L</span></div></label>
+        <label><span>결제금액 <span class="req">*</span></span><div class="unit"><input id="amount" class="big" type="number" inputmode="numeric" step="1" min="0" placeholder="0"><span>원</span></div></label>
       </div>
       <div class="calc" id="unitPrice">계산 단가: -</div>
     </div>
 
     <div id="dieselAmount">
-      <label><span id="amtLabel">주유량</span> <span class="req">*</span><div class="unit"><input id="liters" class="big" type="number" inputmode="decimal" step="0.01" min="0" placeholder="0"><span>L</span></div></label>
+      <label><span><span id="amtLabel">주유량</span> <span class="req">*</span></span><div class="unit"><input id="liters" class="big" type="number" inputmode="decimal" step="0.01" min="0" placeholder="0"><span>L</span></div></label>
     </div>
     <div id="meterField">
-      <label><span id="meterLabel">경유 실제 누적계기량</span> <span class="req">*</span><div class="unit"><input id="meterTotal" class="big" type="number" inputmode="decimal" step="0.001" min="0" placeholder="사용 후 계기값"><span>L</span></div><span class="field-note" id="meterNote">주유를 마친 뒤 경유 주유기에 표시된 누적 숫자를 그대로 입력하세요.</span></label>
+      <label><span><span id="meterLabel">경유 실제 누적계기량</span> <span class="req">*</span></span><div class="unit"><input id="meterTotal" class="big" type="number" inputmode="decimal" step="0.001" min="0" placeholder="사용 후 계기값"><span>L</span></div><span class="field-note" id="meterNote">주유를 마친 뒤 경유 주유기에 표시된 누적 숫자를 그대로 입력하세요.</span></label>
     </div>
     <div class="row"><label>날짜 <input id="date" type="date"></label><label>메모 (선택)<input id="memo" placeholder="예: 영수증 보관"></label></div>
     <button class="save" id="save" type="submit">저장</button><div class="msg" id="msg" role="status"></div>
