@@ -59,6 +59,11 @@
 
     <div id="tankFields" class="stack" hidden>
       <label>입고 품목 <span class="req">*</span><select id="tankProduct"><option value="diesel">경유</option><option value="urea">요소수</option></select></label>
+      <div class="row">
+        <label>단가 <span class="req">*</span><div class="unit"><input id="tankUnitPrice" class="big" type="number" inputmode="numeric" step="1" min="0" placeholder="0"><span>원/L</span></div></label>
+        <label>입고금액<div class="unit"><input id="tankAmount" class="big" type="text" value="" placeholder="자동 계산" readonly><span>원</span></div></label>
+      </div>
+      <div class="calc" id="tankCalc">입고량 × 단가 = 금액</div>
     </div>
 
     <div id="carBox" class="stack">
@@ -119,7 +124,7 @@
     const saved=visibleCars().find(c=>c.plate===mem.get(memoryKey)); if(saved) pick(saved);
   }
   $('tFuel').onclick=()=>setMode('fuel'); $('tExternal').onclick=()=>setMode('external'); $('tUrea').onclick=()=>setMode('urea'); $('tTank').onclick=()=>setMode('tank');
-  $('tankProduct').onchange=()=>{if(mode==='tank'){setMode('tank')}};
+  $('tankProduct').onchange=()=>{if(mode==='tank'){setMode('tank');updateTankAmount()}};
 
   function renderCarOptions(){
     const sel=$('plateSel'); sel.innerHTML=''; sel.add(new Option(mode==='external'?'휘발유·LPG 차량을 고르세요':mode==='urea'?'요소수 사용 차량을 고르세요':'차량을 고르세요',''));
@@ -136,6 +141,8 @@
   $('plateSel').onchange=()=>pick(cars.find(c=>c.plate===$('plateSel').value));
   function updateUnit(){const l=Number($('externalLiters').value),a=Number($('amount').value);$('unitPrice').textContent=l>0&&a>0?'계산 단가: '+Math.round(a/l).toLocaleString('ko-KR')+'원/L':'계산 단가: -'}
   $('externalLiters').oninput=updateUnit; $('amount').oninput=updateUnit;
+  function updateTankAmount(){const l=Number($('liters').value),p=Math.round(Number($('tankUnitPrice').value)),a=l>0&&p>0?Math.round(l*p):0;$('tankAmount').value=a?a.toLocaleString('ko-KR'):'';$('tankCalc').textContent=a?l.toLocaleString('ko-KR')+'L × '+p.toLocaleString('ko-KR')+'원 = '+a.toLocaleString('ko-KR')+'원':'입고량 × 단가 = 금액'}
+  $('liters').addEventListener('input',()=>{if(mode==='tank')updateTankAmount()}); $('tankUnitPrice').oninput=updateTankAmount;
 
   function needPin(text){mem.set('fuel.pin','');document.body.classList.add('locked');$('pinBox').hidden=false;$('pinMsg').textContent=text||'';$('pin').value='';$('pin').focus()}
   $('pinBox').addEventListener('submit',e=>{e.preventDefault();PIN=$('pin').value.trim();if(!PIN){$('pinMsg').textContent='PIN을 입력해 주세요.';return}$('pinMsg').textContent='확인 중…';loadCars()});
@@ -153,11 +160,11 @@
     e.preventDefault();const msg=$('msg');if(mode!=='tank'&&!current){msg.className='msg bad';msg.textContent='차량을 먼저 골라 주세요.';return}
     let d={mode,plate:current?current.plate:'',date:$('date').value,memo:$('memo').value.trim()};if(mode==='tank')d.product=$('tankProduct').value;
     if(mode==='external'){d.fuelType=$('fuelType').value;d.liters=Number($('externalLiters').value);d.amount=Math.round(Number($('amount').value));d.station=$('station').value.trim();if(!(d.liters>0)){msg.className='msg bad';msg.textContent='주유량을 넣어 주세요.';return}if(!(d.amount>0)){msg.className='msg bad';msg.textContent='결제금액을 넣어 주세요.';return}if(d.liters>500){msg.className='msg bad';msg.textContent='주유량이 500L를 넘습니다. 숫자를 확인해 주세요.';return}}
-    else{d.liters=Number($('liters').value);if(!(d.liters>0)){msg.className='msg bad';msg.textContent=(mode==='tank'?'입고량':mode==='urea'?'요소수 사용량':'주유량')+'을 넣어 주세요.';return}if((mode==='fuel'||mode==='urea')&&d.liters>500){msg.className='msg bad';msg.textContent=(mode==='urea'?'요소수 사용량':'주유량')+'이 500L를 넘습니다. 숫자를 확인해 주세요.';return}if(mode==='fuel'||mode==='urea'){d.meterTotal=Number($('meterTotal').value);if(!(d.meterTotal>0)){msg.className='msg bad';msg.textContent=(mode==='urea'?'요소수':'경유')+' 실제 누적계기량을 입력해 주세요.';return}}}
+    else{d.liters=Number($('liters').value);if(!(d.liters>0)){msg.className='msg bad';msg.textContent=(mode==='tank'?'입고량':mode==='urea'?'요소수 사용량':'주유량')+'을 넣어 주세요.';return}if((mode==='fuel'||mode==='urea')&&d.liters>500){msg.className='msg bad';msg.textContent=(mode==='urea'?'요소수 사용량':'주유량')+'이 500L를 넘습니다. 숫자를 확인해 주세요.';return}if(mode==='tank'){d.unitPrice=Math.round(Number($('tankUnitPrice').value));if(!(d.unitPrice>0)){msg.className='msg bad';msg.textContent='입고 단가를 넣어 주세요.';return}d.amount=Math.round(d.liters*d.unitPrice)}if(mode==='fuel'||mode==='urea'){d.meterTotal=Number($('meterTotal').value);if(!(d.meterTotal>0)){msg.className='msg bad';msg.textContent=(mode==='urea'?'요소수':'경유')+' 실제 누적계기량을 입력해 주세요.';return}}}
     $('save').disabled=true;msg.className='msg';msg.textContent='저장 중…';
     apiPost(d).then(res=>{if(res&&res.error==='pin'){needPin('PIN이 바뀌었습니다. 새 PIN을 입력해 주세요.');return}if(!res||!res.ok)throw new Error(res&&res.error);
-      msg.className='msg ok';if(mode==='tank')msg.textContent=(d.product==='urea'?'요소수':'경유')+' 입고 저장: '+d.liters.toLocaleString('ko-KR')+'L';else if(mode==='external'){mem.set('fuel.externalPlate',d.plate);msg.textContent='외부주유 저장: '+d.plate+' · '+d.liters+'L · '+d.amount.toLocaleString('ko-KR')+'원';showRecent(d.plate,res.rows)}else if(mode==='urea'){mem.set('fuel.ureaPlate',d.plate);const latest=res.rows&&res.rows[0];const diff=latest?latest.difference:'0';msg.className=latest&&latest.status==='누락 의심'?'msg bad':'msg ok';msg.textContent='요소수 저장: '+d.plate+' · '+d.liters+'L · 실제누적 '+d.meterTotal.toLocaleString('ko-KR')+'L · 차이 '+diff+'L'+(latest&&latest.status==='누락 의심'?' (누락 의심)':'');showRecent(d.plate,res.rows)}else{mem.set('fuel.plate',d.plate);const latest=res.rows&&res.rows[0];const diff=latest?latest.difference:'0';msg.className=latest&&latest.status==='누락 의심'?'msg bad':'msg ok';msg.textContent='저장: '+d.plate+' · '+d.liters+'L · 실제누적 '+d.meterTotal.toLocaleString('ko-KR')+'L · 차이 '+diff+'L'+(latest&&latest.status==='누락 의심'?' (누락 의심)':'');showRecent(d.plate,res.rows)}
-      $('liters').value='';$('meterTotal').value='';$('externalLiters').value='';$('amount').value='';$('station').value='';$('memo').value='';updateUnit();
+      msg.className='msg ok';if(mode==='tank')msg.textContent=(d.product==='urea'?'요소수':'경유')+' 입고 저장: '+d.liters.toLocaleString('ko-KR')+'L · '+d.unitPrice.toLocaleString('ko-KR')+'원/L · '+d.amount.toLocaleString('ko-KR')+'원';else if(mode==='external'){mem.set('fuel.externalPlate',d.plate);msg.textContent='외부주유 저장: '+d.plate+' · '+d.liters+'L · '+d.amount.toLocaleString('ko-KR')+'원';showRecent(d.plate,res.rows)}else if(mode==='urea'){mem.set('fuel.ureaPlate',d.plate);const latest=res.rows&&res.rows[0];const diff=latest?latest.difference:'0';msg.className=latest&&latest.status==='누락 의심'?'msg bad':'msg ok';msg.textContent='요소수 저장: '+d.plate+' · '+d.liters+'L · 실제누적 '+d.meterTotal.toLocaleString('ko-KR')+'L · 차이 '+diff+'L'+(latest&&latest.status==='누락 의심'?' (누락 의심)':'');showRecent(d.plate,res.rows)}else{mem.set('fuel.plate',d.plate);const latest=res.rows&&res.rows[0];const diff=latest?latest.difference:'0';msg.className=latest&&latest.status==='누락 의심'?'msg bad':'msg ok';msg.textContent='저장: '+d.plate+' · '+d.liters+'L · 실제누적 '+d.meterTotal.toLocaleString('ko-KR')+'L · 차이 '+diff+'L'+(latest&&latest.status==='누락 의심'?' (누락 의심)':'');showRecent(d.plate,res.rows)}
+      $('liters').value='';$('meterTotal').value='';$('externalLiters').value='';$('amount').value='';$('tankUnitPrice').value='';$('tankAmount').value='';$('station').value='';$('memo').value='';updateUnit();updateTankAmount();
     }).catch(err=>{msg.className='msg bad';msg.textContent=(err&&err.message)||'저장하지 못했습니다. 인터넷 연결을 확인해 주세요.'}).finally(()=>{$('save').disabled=false});
   });
 </script>
